@@ -3,7 +3,10 @@
 
 import cocotb
 from cocotb.clock import Clock, Timer
-from cocotb.triggers import ClockCycles, RisingEdge, FallingEdge
+from cocotb.triggers import ClockCycles, Edge, FallingEdge, RisingEdge
+import os
+
+GAME_SEQUENCE_TEST_LENGTH = int(os.getenv("GAME_SEQUENCE_TEST_LENGTH", "5"))
 
 
 def decode_7seg(value: int):
@@ -54,6 +57,16 @@ class SimonDriver:
         elif leds == 0b1000:
             return 3
         raise ValueError(f"Unexpected value for leds: {self._dut.led.value}")
+
+    async def wait_for_led(self):
+        """Wait until one of the LEDs is lit"""
+        while await self.read_one_led() is None:
+            await Edge(self._dut.led)
+
+    async def wait_for_leds_off(self):
+        """Wait until all LEDs are off"""
+        while await self.read_one_led() is not None:
+            await Edge(self._dut.led)
 
     async def read_segments(self):
         """Read the current segment value"""
@@ -127,6 +140,67 @@ async def test_simon(dut):
     dut.seginv.value = 1
     await ClockCycles(dut.clk, 1)
     assert await simon.read_segments() == "01"
+
+
+@cocotb.test()
+async def test_long_game_sequence(dut):
+    dut._log.info("Start")
+    clock = Clock(dut.clk, 20, units="us")  # 50 kHz clock
+    ticks_per_ms = 50  # Clock ticks per millisecond (at 50 kHz)
+    cocotb.start_soon(clock.start())
+
+    simon = SimonDriver(dut, dut.clk)
+
+    # Reset
+    dut._log.info("Reset")
+    dut.ena.value = 1
+    dut.uio_in.value = 0
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 100)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 1)
+
+    # Should display empty score before game starts
+    assert await simon.read_segments() == "  "
+
+    # Press some button to start the game
+    await simon.press_button(0)
+
+    # Wait 510ms for the game to be started
+    await ClockCycles(dut.clk, 510 * ticks_per_ms)
+
+    sequence = []
+
+    for i in range(GAME_SEQUENCE_TEST_LENGTH):
+        dut._log.info(f"Testing round {i + 1}")
+
+        assert await simon.read_segments() == f"{i:02}"
+
+        # Compare the sequence with the LEDs
+        for i in range(len(sequence)):
+            led_index = await simon.read_one_led()
+            assert led_index == sequence[i]
+            await simon.wait_for_leds_off()
+            await simon.wait_for_led()
+
+        led_index = await simon.read_one_led()
+        sequence.append(led_index)
+
+        # Wait for the LED to go off
+        await ClockCycles(dut.clk, 310 * ticks_per_ms)
+        assert await simon.read_one_led() is None
+
+        for i in range(len(sequence)):
+            # Wait another 100ms for the game to be ready for input
+            await ClockCycles(dut.clk, 100 * ticks_per_ms)
+            await simon.press_button(sequence[i])
+            assert await simon.read_one_led() == sequence[i]
+            # Wait for 310ms for the input to be registered
+            await ClockCycles(dut.clk, 310 * ticks_per_ms)
+            assert await simon.read_one_led() is None
+
+        # Wait for the next round (until one LED is lit)
+        await simon.wait_for_led()
 
 
 # Skipped by default, as it takes a long time to run. To run it, use:
