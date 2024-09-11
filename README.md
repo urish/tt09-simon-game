@@ -24,5 +24,5 @@ The game continues until the user has made a mistake. Then a game over sound is 
 
 ## Online simulation
 
-You can play the game using the online Wokwi simulation at https://wokwi.com/projects/397436605640509441. 
+You can play the game using the online Wokwi simulation at https://wokwi.com/projects/408757730664700929. 
 The simulation also shows the wiring diagram.

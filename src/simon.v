@@ -3,7 +3,7 @@
 
 /*
  * Simon Says game in Verilog. Wokwi Simulation project:
- * https://wokwi.com/projects/397436605640509441
+ * https://wokwi.com/projects/408757730664700929
  */
 
 `default_nettype none
