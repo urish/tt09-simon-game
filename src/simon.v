@@ -20,6 +20,9 @@ module simon (
     output wire [1:0] segment_digits
 );
 
+  localparam MAX_GAME_LEN = 100;  // Practically, 127, but we only have two digit score display
+  localparam GAME_LEN_BITS = $clog2(MAX_GAME_LEN);
+
   wire [9:0] GAME_TONES[3:0];
   assign GAME_TONES[0] = 196;  // G3
   assign GAME_TONES[1] = 262;  // C4
@@ -57,8 +60,8 @@ module simon (
   reg lfsr_stopped;
   reg [1:0] lfsr_cycles;
 
-  reg [4:0] seq_counter;
-  reg [4:0] seq_length;
+  reg [GAME_LEN_BITS - 1:0] seq_counter;
+  reg [GAME_LEN_BITS - 1:0] seq_length;
   wire [1:0] seq = lfsr_value[1:0];
   reg [3:0] state;
 
