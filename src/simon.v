@@ -223,6 +223,7 @@ module simon (
   );
 
   reg [63:0] state_name;  // For debugging purposes
+  wire _unused = &{state_name};  // Prevent unused variable warning
   always @(*) begin
     case (state)
       StatePowerOn: state_name = "PowerOn";
