@@ -54,13 +54,13 @@ tb.user_project.simon1.lfsr_cycles[1:0]
 @200
 -LFSR
 @28
-tb.user_project.simon1.lfsr1.enable
-tb.user_project.simon1.lfsr1.feedback
+tb.user_project.simon1.lfsr_inst.enable
+tb.user_project.simon1.lfsr_inst.feedback
 @22
-tb.user_project.simon1.lfsr1.lfsr_out[31:0]
+tb.user_project.simon1.lfsr_inst.lfsr_out[31:0]
 @28
-tb.user_project.simon1.lfsr1.load_enable
+tb.user_project.simon1.lfsr_inst.load_enable
 @22
-tb.user_project.simon1.lfsr1.load_value[31:0]
+tb.user_project.simon1.lfsr_inst.load_value[31:0]
 [pattern_trace] 1
 [pattern_trace] 0

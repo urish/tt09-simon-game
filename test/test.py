@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: © 2023 Uri Shaked <uri@wokwi.com>
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 
 import cocotb
 from cocotb.clock import Clock, Timer

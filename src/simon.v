@@ -1,5 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: © 2023-2024 Uri Shaked <uri@wokwi.com>
-// SPDX-License-Identifier: MIT
 
 /*
  * Simon Says game in Verilog. Wokwi Simulation project:
@@ -7,127 +7,6 @@
  */
 
 `default_nettype none
-
-module wokwi (
-    input  CLK,
-    input  RST,
-    input  BTN0,
-    input  BTN1,
-    input  BTN2,
-    input  BTN3,
-    output LED0,
-    output LED1,
-    output LED2,
-    output LED3,
-    output SND,
-    output SEG_A,
-    output SEG_B,
-    output SEG_C,
-    output SEG_D,
-    output SEG_E,
-    output SEG_F,
-    output SEG_G,
-    output DIG1,
-    output DIG2
-);
-
-  simon simon1 (
-      .clk(CLK),
-      .rst(RST),
-      .ticks_per_milli(16'd50),
-      .btn({BTN3, BTN2, BTN1, BTN0}),
-      .led({LED3, LED2, LED1, LED0}),
-      .segments_invert(1'b1),  // For common anode 7-segment display
-      .segments({SEG_G, SEG_F, SEG_E, SEG_D, SEG_C, SEG_B, SEG_A}),
-      .segment_digits({DIG2, DIG1}),
-      .sound(SND)
-  );
-
-endmodule
-
-
-module score (
-    input wire clk,
-    input wire rst,
-    input wire ena,
-    input wire invert,
-    input wire inc,
-    output reg [6:0] segments,
-    output reg [1:0] digits
-);
-  reg active_digit;
-  reg [3:0] ones;
-  reg [3:0] tens;
-  wire [3:0] digit_value = active_digit ? tens : ones;
-
-  always @(posedge clk) begin
-    active_digit <= ~active_digit;
-
-    if (rst) begin
-      ones <= 0;
-      tens <= 0;
-      active_digit <= 0;
-    end else if (inc) begin
-      ones <= ones + 1;
-      if (ones == 9) begin
-        ones <= 0;
-        tens <= tens + 1;
-        if (tens == 9) begin
-          tens <= 0;
-        end
-      end
-    end
-
-    case (active_digit)
-      1'b0: digits <= invert ? 2'b10 : 2'b01;
-      1'b1: digits <= invert ? 2'b01 : 2'b10;
-    endcase
-
-    case (ena ? digit_value : 4'd15)
-      4'd0: segments <= invert ? 7'b1000000 : 7'b0111111;
-      4'd1: segments <= invert ? 7'b1111001 : 7'b0000110;
-      4'd2: segments <= invert ? 7'b0100100 : 7'b1011011;
-      4'd3: segments <= invert ? 7'b0110000 : 7'b1001111;
-      4'd4: segments <= invert ? 7'b0011001 : 7'b1100110;
-      4'd5: segments <= invert ? 7'b0010010 : 7'b1101101;
-      4'd6: segments <= invert ? 7'b0000010 : 7'b1111101;
-      4'd7: segments <= invert ? 7'b1111000 : 7'b0000111;
-      4'd8: segments <= invert ? 7'b0000000 : 7'b1111111;
-      4'd9: segments <= invert ? 7'b0010000 : 7'b1101111;
-      default: segments <= invert ? 7'b1111111 : 7'b0000000;
-    endcase
-  end
-
-endmodule
-
-
-module play (
-    input wire clk,
-    input wire rst,
-    input wire [15:0] ticks_per_milli,
-    input wire [9:0] freq,
-    output reg sound
-);
-  reg  [31:0] tick_counter;
-  wire [31:0] ticks_per_second = ticks_per_milli * 1000;
-  wire [31:0] freq32 = {22'b0, freq};
-
-  always @(posedge clk) begin
-    if (rst) begin
-      tick_counter <= 0;
-      sound <= 0;
-    end else if (freq == 0) begin
-      sound <= 0;
-    end else begin
-      tick_counter <= tick_counter + freq32;
-      if (tick_counter >= (ticks_per_second >> 1)) begin
-        sound <= !sound;
-        tick_counter <= tick_counter + freq32 - (ticks_per_second >> 1);
-      end
-    end
-  end
-
-endmodule
 
 module simon (
     input wire clk,
@@ -195,7 +74,7 @@ module simon (
   reg score_rst;
   reg score_ena;
 
-  play play1 (
+  sound_gen sound_gen_inst (
       .clk(clk),
       .rst(rst),
       .ticks_per_milli(ticks_per_milli),
@@ -203,7 +82,7 @@ module simon (
       .sound(sound)
   );
 
-  score score1 (
+  score score_inst (
       .clk(clk),
       .rst(rst | score_rst),
       .ena(score_ena),
@@ -213,7 +92,7 @@ module simon (
       .digits(segment_digits)
   );
 
-  galois_lfsr lfsr1 (
+  galois_lfsr lfsr_inst (
       .clk(clk),
       .rst(rst),
       .enable(~lfsr_stopped || lfsr_cycles > 0),
