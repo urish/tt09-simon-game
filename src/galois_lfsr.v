@@ -20,7 +20,9 @@ module galois_lfsr (
     if (rst) begin
       lfsr_out <= 32'h2048FAFA;  // Initialize LFSR to non-zero value
     end else begin
-      if (load_enable) begin
+      if (lfsr_out == 32'h0) begin
+        lfsr_out <= 32'h2048FAFA;  // Reload LFSR to non-zero value
+      end else if (load_enable) begin
         lfsr_out <= load_value;
       end else if (enable) begin
         lfsr_out <= {lfsr_out[30:0], feedback};  // Shift left and insert feedback bit

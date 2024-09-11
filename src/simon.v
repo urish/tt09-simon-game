@@ -175,7 +175,7 @@ module simon (
   wire [31:0] lfsr_value;
   reg [31:0] lfsr_capture;
   reg lfsr_rewind;
-  reg lfsr_free_running;
+  reg lfsr_stopped;
   reg [1:0] lfsr_cycles;
 
   reg [4:0] seq_counter;
@@ -216,7 +216,7 @@ module simon (
   galois_lfsr lfsr1 (
       .clk(clk),
       .rst(rst),
-      .enable(lfsr_free_running || lfsr_cycles > 0),
+      .enable(~lfsr_stopped || lfsr_cycles > 0),
       .load_enable(lfsr_rewind),
       .load_value(lfsr_capture),
       .lfsr_out(lfsr_value)
@@ -256,7 +256,7 @@ module simon (
       score_ena <= 0;
       lfsr_rewind <= 0;
       lfsr_capture <= 0;
-      lfsr_free_running <= 1;
+      lfsr_stopped <= 0;
       lfsr_cycles <= 0;
     end else begin
       tick_counter <= tick_counter + 1;
@@ -282,7 +282,7 @@ module simon (
             led <= 4'b0000;
             millis_counter <= 0;
             score_ena <= 1;
-            lfsr_free_running <= 0;
+            lfsr_stopped <= 1;
             state <= StateInit;
           end
         end
@@ -361,7 +361,7 @@ module simon (
             end else begin
               millis_counter <= 0;
               state <= StateGameOver;
-              lfsr_free_running <= 1;
+              lfsr_stopped <= 0;
             end
           end
         end
@@ -411,7 +411,7 @@ module simon (
             led <= 4'b0000;
             sound_freq <= 0;
             millis_counter <= 0;
-            lfsr_free_running <= 0;
+            lfsr_stopped <= 1;
             state <= StateInit;
           end
         end
