@@ -7,18 +7,18 @@ from cocotb.triggers import ClockCycles, RisingEdge, FallingEdge
 
 
 def decode_7seg(value: int):
-    """ Decode a 7-segment value to a digit """
+    """Decode a 7-segment value to a digit"""
     decode_map = {
-        0x3f: "0",
+        0x3F: "0",
         0x06: "1",
-        0x5b: "2",
-        0x4f: "3",
+        0x5B: "2",
+        0x4F: "3",
         0x66: "4",
-        0x6d: "5",
-        0x7d: "6",
+        0x6D: "5",
+        0x7D: "6",
         0x07: "7",
-        0x7f: "8",
-        0x6f: "9",
+        0x7F: "8",
+        0x6F: "9",
         0x00: " ",
     }
     if value in decode_map:
@@ -34,14 +34,14 @@ class SimonDriver:
         self._dut.seginv.value = 0
 
     async def press_button(self, index):
-        """ Press a button for 100 clock cycle, index is zero based """
+        """Press a button for 100 clock cycle, index is zero based"""
         self._dut.btn.value = 1 << index
         await ClockCycles(self._clock, 100)
         self._dut.btn.value = 0
         await ClockCycles(self._clock, 100)
 
     async def read_one_led(self):
-        """ Returns the index of the currently lit LED, or None if no LED is lit """
+        """Returns the index of the currently lit LED, or None if no LED is lit"""
         leds = self._dut.led.value.integer
         if leds == 0b0000:
             return None
@@ -56,19 +56,19 @@ class SimonDriver:
         raise ValueError(f"Unexpected value for leds: {self._dut.led.value}")
 
     async def read_segments(self):
-        """ Read the current segment value """
-        diginv = 0x7f if self._dut.seginv.value.integer else 0
+        """Read the current segment value"""
+        diginv = 0x7F if self._dut.seginv.value.integer else 0
         if self._dut.seginv.value.integer:
             await RisingEdge(self._dut.dig1)
         else:
             await FallingEdge(self._dut.dig1)
-        await Timer(10, units='ns')
+        await Timer(10, units="ns")
         dig1 = decode_7seg(self._dut.seg.value.integer ^ diginv)
         if self._dut.seginv.value.integer:
             await RisingEdge(self._dut.dig2)
         else:
             await FallingEdge(self._dut.dig2)
-        await Timer(10, units='ns')
+        await Timer(10, units="ns")
         dig2 = decode_7seg(self._dut.seg.value.integer ^ diginv)
         return f"{dig1}{dig2}"
 
@@ -76,8 +76,8 @@ class SimonDriver:
 @cocotb.test()
 async def test_simon(dut):
     dut._log.info("start")
-    clock = Clock(dut.clk, 20, units="us") # 50 kHz clock
-    ticks_per_ms = 50 # Clock ticks per millisecond (at 50 kHz)
+    clock = Clock(dut.clk, 20, units="us")  # 50 kHz clock
+    ticks_per_ms = 50  # Clock ticks per millisecond (at 50 kHz)
     cocotb.start_soon(clock.start())
 
     simon = SimonDriver(dut, dut.clk)
@@ -105,7 +105,7 @@ async def test_simon(dut):
     assert initial_led_index in [0, 1, 2, 3]
     dut._log.info(f"Initial LED index: {initial_led_index}")
 
-    # Wait 300ms for the LED to go off 
+    # Wait 300ms for the LED to go off
     await ClockCycles(dut.clk, 300 * ticks_per_ms)
     assert await simon.read_one_led() is None
 
