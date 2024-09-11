@@ -141,8 +141,6 @@ module simon (
     output wire [1:0] segment_digits
 );
 
-  localparam MAX_GAME_LEN = 32;
-
   wire [9:0] GAME_TONES[3:0];
   assign GAME_TONES[0] = 196;  // G3
   assign GAME_TONES[1] = 262;  // C4
@@ -174,9 +172,15 @@ module simon (
   localparam StateNextLevel = 7;
   localparam StateGameOver = 8;
 
+  wire [31:0] lfsr_value;
+  reg [31:0] lfsr_capture;
+  reg lfsr_rewind;
+  reg lfsr_free_running;
+  reg [1:0] lfsr_cycles;
+
   reg [4:0] seq_counter;
   reg [4:0] seq_length;
-  reg [1:0] seq[MAX_GAME_LEN-1:0];
+  wire [1:0] seq = lfsr_value[1:0];
   reg [3:0] state;
 
   reg [15:0] tick_counter;
@@ -184,7 +188,6 @@ module simon (
   reg [2:0] tone_sequence_counter;
   reg [9:0] sound_freq;
 
-  reg [1:0] next_random;
   reg [1:0] user_input;
   reg [3:0] prev_btn;
   reg button_released;
@@ -210,8 +213,16 @@ module simon (
       .digits(segment_digits)
   );
 
-  reg [63:0] state_name;  // For debugging purposes
+  galois_lfsr lfsr1 (
+      .clk(clk),
+      .rst(rst),
+      .enable(lfsr_free_running || lfsr_cycles > 0),
+      .load_enable(lfsr_rewind),
+      .load_value(lfsr_capture),
+      .lfsr_out(lfsr_value)
+  );
 
+  reg [63:0] state_name;  // For debugging purposes
   always @(*) begin
     case (state)
       StatePowerOn: state_name = "PowerOn";
@@ -234,9 +245,7 @@ module simon (
       tick_counter <= 0;
       millis_counter <= 0;
       sound_freq <= 0;
-      next_random <= 0;
       state <= StatePowerOn;
-      seq[0] <= 0;
       led <= 4'b0000;
       user_input <= 0;
       prev_btn <= 0;
@@ -244,11 +253,19 @@ module simon (
       score_inc <= 0;
       score_rst <= 0;
       score_ena <= 0;
+      lfsr_rewind <= 0;
+      lfsr_capture <= 0;
+      lfsr_free_running <= 1;
+      lfsr_cycles <= 0;
     end else begin
       tick_counter <= tick_counter + 1;
-      next_random <= next_random + 1;
       score_inc <= 0;
       score_rst <= 0;
+      lfsr_rewind <= 0;
+
+      if (lfsr_cycles > 0) begin
+        lfsr_cycles <= lfsr_cycles - 1;
+      end
 
       if (tick_counter == ticks_per_milli - 1) begin
         tick_counter   <= 0;
@@ -259,13 +276,13 @@ module simon (
         StatePowerOn: begin
           led <= 4'b1111;
           led[millis_counter[9:8]] <= 1'b0;
-          // Wait until the user presses some button - the delay will seed the random sequence
+          // Wait until the user presses some button - the delay will seed the LFSR
           if (btn != 0) begin
-            state <= StateInit;
             led <= 4'b0000;
             millis_counter <= 0;
             score_ena <= 1;
-            seq[0] <= next_random;
+            lfsr_free_running <= 0;
+            state <= StateInit;
           end
         end
         StateInit: begin
@@ -274,15 +291,17 @@ module simon (
           tone_sequence_counter <= 0;
           if (millis_counter == 500) begin
             score_rst <= 1;
+            lfsr_capture <= lfsr_value;
             state <= StatePlay;
           end
         end
         StatePlay: begin
           led <= 0;
-          led[seq[seq_counter]] <= 1'b1;
-          sound_freq <= GAME_TONES[seq[seq_counter]];
+          led[seq] <= 1'b1;
+          sound_freq <= GAME_TONES[seq];
           millis_counter <= 0;
           state <= StatePlayWait;
+          lfsr_cycles <= 2;  // Advance LFSR
         end
         StatePlayWait: begin
           if (millis_counter == 300) begin
@@ -292,6 +311,7 @@ module simon (
           if (millis_counter == 400) begin
             if (seq_counter + 1 == seq_length) begin
               state <= StateUserWait;
+              lfsr_rewind <= 1;  // Rewind LFSR to the captured value
               millis_counter <= 0;
               seq_counter <= 0;
             end else begin
@@ -307,7 +327,6 @@ module simon (
             state <= StateUserInput;
             prev_btn <= btn;
             button_released <= 0;
-            seq[seq_length] <= next_random;
             case (btn)
               4'b0001: user_input <= 0;
               4'b0010: user_input <= 1;
@@ -326,19 +345,22 @@ module simon (
           end
           if (millis_counter == 300) begin
             sound_freq <= 0;
-            if (user_input == seq[seq_counter]) begin
+            if (user_input == seq) begin
               if (seq_counter + 1 == seq_length) begin
                 millis_counter <= 0;
                 seq_length <= seq_length + 1;
+                lfsr_rewind <= 1;  // Rewind LFSR to the captured value
                 state <= StateNextLevel;
                 score_inc <= 1;
               end else begin
+                lfsr_cycles <= 2;  // Advance LFSR
                 seq_counter <= seq_counter + 1;
                 state <= ~button_released && btn == 0 ? StateUserWait : StateWaitButtonRelease;
               end
             end else begin
               millis_counter <= 0;
               state <= StateGameOver;
+              lfsr_free_running <= 1;
             end
           end
         end
@@ -388,7 +410,7 @@ module simon (
             led <= 4'b0000;
             sound_freq <= 0;
             millis_counter <= 0;
-            seq[0] <= next_random;
+            lfsr_free_running <= 0;
             state <= StateInit;
           end
         end
