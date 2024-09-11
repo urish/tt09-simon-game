@@ -210,6 +210,23 @@ module simon (
       .digits(segment_digits)
   );
 
+  reg [63:0] state_name;  // For debugging purposes
+
+  always @(*) begin
+    case (state)
+      StatePowerOn: state_name = "PowerOn";
+      StateInit: state_name = "Init";
+      StatePlay: state_name = "Play";
+      StatePlayWait: state_name = "PlayWait";
+      StateUserWait: state_name = "UserWait";
+      StateWaitButtonRelease: state_name = "WaitBtnR";
+      StateUserInput: state_name = "UserInpt";
+      StateNextLevel: state_name = "NextLvl";
+      StateGameOver: state_name = "GameOver";
+      default: state_name = "Unknown";
+    endcase
+  end
+
   always @(posedge clk) begin
     if (rst) begin
       seq_length <= 0;
