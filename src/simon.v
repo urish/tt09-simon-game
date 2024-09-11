@@ -32,15 +32,15 @@ module wokwi (
 );
 
   simon simon1 (
-      .clk      (CLK),
-      .rst      (RST),
-      .ticks_per_milli (16'd50),
-      .btn      ({BTN3, BTN2, BTN1, BTN0}),
-      .led      ({LED3, LED2, LED1, LED0}),
-      .segments_invert(1'b1), // For common anode 7-segment display
+      .clk(CLK),
+      .rst(RST),
+      .ticks_per_milli(16'd50),
+      .btn({BTN3, BTN2, BTN1, BTN0}),
+      .led({LED3, LED2, LED1, LED0}),
+      .segments_invert(1'b1),  // For common anode 7-segment display
       .segments({SEG_G, SEG_F, SEG_E, SEG_D, SEG_C, SEG_B, SEG_A}),
       .segment_digits({DIG2, DIG1}),
-      .sound    (SND)
+      .sound(SND)
   );
 
 endmodule
@@ -78,7 +78,7 @@ module score (
       end
     end
 
-    case(active_digit)
+    case (active_digit)
       1'b0: digits <= invert ? 2'b10 : 2'b01;
       1'b1: digits <= invert ? 2'b01 : 2'b10;
     endcase
@@ -108,7 +108,7 @@ module play (
     input wire [9:0] freq,
     output reg sound
 );
-  reg [31:0] tick_counter;
+  reg  [31:0] tick_counter;
   wire [31:0] ticks_per_second = ticks_per_milli * 1000;
   wire [31:0] freq32 = {22'b0, freq};
 
@@ -229,7 +229,7 @@ module simon (
       score_ena <= 0;
     end else begin
       tick_counter <= tick_counter + 1;
-      next_random  <= next_random + 1;
+      next_random <= next_random + 1;
       score_inc <= 0;
       score_rst <= 0;
 
