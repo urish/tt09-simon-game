@@ -127,3 +127,51 @@ async def test_simon(dut):
     dut.seginv.value = 1
     await ClockCycles(dut.clk, 1)
     assert await simon.read_segments() == "01"
+
+
+# Skipped by default, as it takes a long time to run. To run it, use:
+#
+#     make TESTCASE=test_pseudo_randomness
+@cocotb.test(skip=True)
+async def test_pseudo_randomness(dut):
+    dut._log.info("start")
+    clock = Clock(dut.clk, 20, units="us")  # 50 kHz clock
+    ticks_per_ms = 50  # Clock ticks per millisecond (at 50 kHz)
+    cocotb.start_soon(clock.start())
+
+    simon = SimonDriver(dut, dut.clk)
+
+    # Reset
+    dut.ena.value = 1
+    dut.uio_in.value = 0
+
+    led_bins = [0, 0, 0, 0]
+
+    def normalize_bins(bins):
+        return [count / sum(bins) for count in bins]
+
+    def format_bins(bins):
+        return "[" + ", ".join([f"{count:.2f}" for count in normalize_bins(bins)]) + "]"
+
+    for i in range(500):
+        dut.rst_n.value = 0
+        await ClockCycles(dut.clk, 100)
+        dut.rst_n.value = 1
+        await ClockCycles(dut.clk, 1)
+
+        await ClockCycles(dut.clk, i * ticks_per_ms)
+
+        # Press some button to start the game
+        await simon.press_button(0)
+
+        # Wait 510ms for the game to be started
+        await ClockCycles(dut.clk, 510 * ticks_per_ms)
+        led_index = await simon.read_one_led()
+        assert led_index in [0, 1, 2, 3]
+        led_bins[led_index] += 1
+        dut._log.info(
+            f"Iteration: {i}, LED index: {led_index}, bins: {format_bins(led_bins)}"
+        )
+
+    dut._log.info(f"LED bins: {format_bins(led_bins)} (raw: {led_bins})")
+    assert all(0.2 <= count <= 0.3 for count in normalize_bins(led_bins))

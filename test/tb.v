@@ -7,11 +7,13 @@
 module tb ();
 
   // Dump the signals to a VCD file. You can view it with gtkwave.
+  `ifndef NO_VCD
   initial begin
     $dumpfile("tb.vcd");
     $dumpvars(0, tb);
     #1;
   end
+  `endif
 
   // inputs from testbench
   reg [3:0] btn;
