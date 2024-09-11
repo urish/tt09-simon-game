@@ -356,7 +356,7 @@ module simon (
               end else begin
                 lfsr_cycles <= 2;  // Advance LFSR
                 seq_counter <= seq_counter + 1;
-                state <= ~button_released && btn == 0 ? StateUserWait : StateWaitButtonRelease;
+                state <= button_released && btn == 0 ? StateUserWait : StateWaitButtonRelease;
               end
             end else begin
               millis_counter <= 0;
